@@ -1,0 +1,749 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>한국사 기억 원정대</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&family=Press+Start+2P&display=swap">
+<style>
+/* Layout: one centered 16-bit RPG "screen" — HUD bar, battle arena, dialogue window — dark night palette with parchment frames */
+:root{
+  --night:#10142b;
+  --panel:#182044;
+  --panel-2:#222b5a;
+  --frame:#ece4cf;
+  --text:#f4efe2;
+  --muted:#a3abd0;
+  --gold:#f3c34f;
+  --hp:#e5585f;
+  --exp:#5bb6f2;
+  --ok:#62d593;
+  --bad:#ef6b70;
+  --f-display:"Do Hyeon","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-pixel:"Press Start 2P","Courier New",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--night);color:var(--text)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:20px 40px;
+  background-image:radial-gradient(circle at 20% 10%,rgba(91,182,242,.08),transparent 40%),radial-gradient(circle at 80% 90%,rgba(243,195,79,.06),transparent 40%);min-height:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+#app{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.win{background:var(--panel);border:3px solid var(--frame);border-radius:8px;box-shadow:inset 0 0 0 3px var(--panel),inset 0 0 0 5px rgba(236,228,207,.28),0 6px 0 rgba(0,0,0,.35);padding:18px 20px}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+.pix{font-family:var(--f-pixel);font-size:10px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.gold{color:var(--gold)}
+.btn{background:var(--panel-2);border:2px solid var(--frame);border-radius:6px;padding:10px 16px;font-family:var(--f-display);font-size:19px;line-height:1.2;transition:transform .08s,background .15s}
+.btn:hover{background:#2c3772}
+.btn:active{transform:translateY(2px)}
+.btn.primary{background:var(--gold);color:#1b1630;border-color:var(--gold)}
+.btn.primary:hover{background:#ffd56b}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+canvas.sprite{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+
+/* title */
+.title-hero{display:grid;gap:14px;text-align:center;padding:28px 20px}
+.title-hero .eyebrow{font-family:var(--f-pixel);font-size:10px;color:var(--gold);letter-spacing:.12em}
+.title-hero h1{font-size:clamp(40px,9vw,64px);line-height:1.05;color:var(--text);text-shadow:4px 4px 0 #2a2f63,6px 6px 0 rgba(0,0,0,.4)}
+.title-hero .sub{font-family:var(--f-display);font-size:20px;color:var(--muted)}
+.title-sprites{display:flex;justify-content:center;align-items:flex-end;gap:18px;margin:6px 0}
+.story{font-size:16px;max-width:60ch;margin:0 auto}
+.field{display:grid;gap:6px}
+.field label{font-family:var(--f-display);font-size:18px}
+.field input{background:var(--night);border:2px solid var(--frame);border-radius:6px;padding:10px 12px;font:inherit;color:var(--text);width:100%}
+.classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.cls{text-align:left;background:var(--panel-2);border:2px solid rgba(236,228,207,.4);border-radius:8px;padding:12px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center}
+.cls[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.cls b{font-family:var(--f-display);font-weight:400;font-size:20px}
+.cls span{grid-column:2;font-size:14px;color:var(--muted);line-height:1.45}
+.cls canvas{grid-row:span 2}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+
+/* hud */
+.hud{display:grid;grid-template-columns:auto 1fr auto;gap:12px 16px;align-items:center;padding:12px 16px}
+.hud .who{font-family:var(--f-display);font-size:20px;line-height:1.1}
+.hud .who small{display:block;font-family:var(--f-body);font-size:13px;color:var(--muted)}
+.bars{display:grid;gap:6px;min-width:0}
+.bar{display:grid;grid-template-columns:28px 1fr 74px;gap:8px;align-items:center}
+.bar .track{height:12px;background:#0b0e20;border:2px solid var(--frame);border-radius:3px;overflow:hidden}
+.bar .fill{height:100%;transition:width .4s steps(8)}
+.bar .fill.hp{background:linear-gradient(var(--hp),#b83b45)}
+.bar .fill.exp{background:linear-gradient(var(--exp),#3b85c0)}
+.bar .num{text-align:right}
+.items{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.item{display:flex;gap:6px;align-items:center;background:var(--panel-2);border:2px solid var(--frame);border-radius:6px;padding:6px 10px;font-family:var(--f-display);font-size:16px}
+.item:disabled{opacity:.4}
+.item .cnt{font-family:var(--f-pixel);font-size:9px;color:var(--gold)}
+@media (max-width:560px){.hud{grid-template-columns:1fr}.items{justify-content:flex-start}}
+
+/* arena */
+.arena{position:relative;height:230px;border:3px solid var(--frame);border-radius:8px;overflow:hidden;background:var(--sky,#2a3470)}
+.arena::before{content:"";position:absolute;inset:auto 0 0 0;height:62px;background:var(--ground,#3c3a2c);border-top:4px solid rgba(0,0,0,.25);
+  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.14) 0 8px,transparent 8px 16px)}
+.arena .stage-tag{position:absolute;left:12px;top:10px;font-family:var(--f-pixel);font-size:9px;color:var(--text);background:rgba(0,0,0,.35);padding:6px 8px;border-radius:4px;letter-spacing:.06em}
+.arena .wave{position:absolute;right:12px;top:10px;font-family:var(--f-pixel);font-size:9px;background:rgba(0,0,0,.35);padding:6px 8px;border-radius:4px}
+.fighter{position:absolute;bottom:40px;display:grid;justify-items:center;gap:6px}
+.fighter.hero{left:12%}
+.fighter.foe{right:10%}
+.foe-name{font-family:var(--f-display);font-size:17px;background:rgba(0,0,0,.45);padding:2px 10px;border-radius:4px;white-space:nowrap}
+.pips{display:flex;gap:3px}
+.pip{width:12px;height:12px;border:2px solid var(--frame);background:var(--hp);border-radius:2px}
+.pip.off{background:#0b0e20}
+.bob{animation:bob 1.6s steps(4) infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.hit{animation:hit .45s linear}
+@keyframes hit{0%,100%{transform:translateX(0);filter:none}20%{transform:translateX(-8px);filter:brightness(3)}40%{transform:translateX(8px)}60%{transform:translateX(-5px);filter:brightness(2)}80%{transform:translateX(4px)}}
+.lunge{animation:lunge .35s ease-out}
+@keyframes lunge{40%{transform:translateX(40px)}}
+.foe-lunge{animation:foelunge .35s ease-out}
+@keyframes foelunge{40%{transform:translateX(-40px)}}
+.dying{animation:die .7s steps(6) forwards}
+@keyframes die{to{opacity:0;transform:translateY(16px) scaleY(.3)}}
+.flash-red{animation:fr .4s}
+@keyframes fr{0%{box-shadow:inset 0 0 0 200px rgba(229,88,95,.45)}100%{box-shadow:inset 0 0 0 200px rgba(229,88,95,0)}}
+.dmg{position:absolute;font-family:var(--f-pixel);font-size:16px;pointer-events:none;text-shadow:2px 2px 0 #000;animation:float 1s ease-out forwards}
+@keyframes float{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-46px)}}
+.streak{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-family:var(--f-pixel);font-size:9px;color:var(--gold);background:rgba(0,0,0,.45);padding:6px 8px;border-radius:4px}
+
+/* dialogue */
+.dlg{display:grid;gap:14px}
+.dlg .meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.qtext{font-size:18px;line-height:1.65;white-space:pre-line;font-family:var(--f-body)}
+.qtext .src{display:block;margin-top:8px;padding:10px 12px;border-left:4px solid var(--gold);background:rgba(0,0,0,.22);font-size:16px}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;text-align:left;background:var(--panel-2);border:2px solid rgba(236,228,207,.5);border-radius:6px;padding:10px 12px;font-size:16px;line-height:1.45}
+.opt:hover:not(:disabled){border-color:var(--gold);background:#2a3468}
+.opt .k{font-family:var(--f-pixel);font-size:10px;color:var(--gold)}
+.opt.right{border-color:var(--ok);background:rgba(98,213,147,.16)}
+.opt.wrong{border-color:var(--bad);background:rgba(239,107,112,.16)}
+.opt.gone{opacity:.25;text-decoration:line-through}
+.opt:disabled{cursor:default}
+.ox{grid-template-columns:1fr 1fr}
+.ox .opt{grid-template-columns:1fr;justify-items:center;font-family:var(--f-display);font-size:44px;padding:12px}
+.seq-picked{display:grid;gap:6px;counter-reset:s}
+.seq-slot{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;border:2px dashed rgba(236,228,207,.35);border-radius:6px;padding:8px 12px;min-height:44px;font-size:15px}
+.seq-slot .k{font-family:var(--f-pixel);font-size:10px;color:var(--gold)}
+.seq-slot.filled{border-style:solid;border-color:var(--frame);background:rgba(0,0,0,.2)}
+.fb{border-top:2px dashed rgba(236,228,207,.35);padding-top:12px;display:grid;gap:8px}
+.fb .verdict{font-family:var(--f-display);font-size:24px}
+.fb .verdict.ok{color:var(--ok)}
+.fb .verdict.no{color:var(--bad)}
+.fb .ans{font-size:15px}
+.fb .exp{font-size:15px;color:var(--text);background:rgba(0,0,0,.22);border-radius:6px;padding:10px 12px}
+.talk{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start}
+.talk .name{font-family:var(--f-display);color:var(--gold);font-size:18px}
+.talk p{margin:4px 0 0}
+
+/* map */
+.map-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.map-head h2{font-size:30px}
+.timeline{position:relative;display:grid;gap:10px;padding-left:34px}
+.timeline::before{content:"";position:absolute;left:13px;top:10px;bottom:10px;width:4px;background:repeating-linear-gradient(var(--frame) 0 8px,transparent 8px 14px);opacity:.5}
+.node{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;align-items:center;text-align:left;background:var(--panel);border:2px solid rgba(236,228,207,.55);border-radius:8px;padding:12px 14px}
+.node::before{content:"";position:absolute;left:-29px;top:50%;width:16px;height:16px;margin-top:-8px;background:var(--night);border:3px solid var(--frame);border-radius:3px;transform:rotate(45deg)}
+.node.clear::before{background:var(--gold);border-color:var(--gold)}
+.node.open::before{background:var(--exp)}
+.node:hover:not(:disabled){border-color:var(--gold)}
+.node:disabled{opacity:.45;cursor:not-allowed}
+.node .num{font-family:var(--f-pixel);font-size:11px;color:var(--gold);width:44px}
+.node .t{font-family:var(--f-display);font-size:20px;line-height:1.2}
+.node .y{font-size:13px;color:var(--muted)}
+.node .st{font-family:var(--f-pixel);font-size:10px;text-align:right;white-space:nowrap}
+.node.final{border-color:var(--gold);background:linear-gradient(90deg,#2a1f3f,var(--panel))}
+.stars{color:var(--gold);letter-spacing:2px}
+
+/* lists */
+.note-list{display:grid;gap:10px}
+.note{background:var(--panel-2);border-radius:6px;padding:12px 14px;display:grid;gap:4px;font-size:15px}
+.note .tag{font-family:var(--f-pixel);font-size:9px;color:var(--gold)}
+.note .q{white-space:pre-line}
+.note .a{color:var(--ok)}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--panel-2);border-radius:6px;padding:12px;text-align:center}
+.stat .v{font-family:var(--f-pixel);font-size:18px;color:var(--gold);margin-top:6px}
+.stat .l{font-size:13px;color:var(--muted)}
+.cert{text-align:center;display:grid;gap:12px;border-color:var(--gold)}
+.cert h2{font-size:40px;color:var(--gold)}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--gold);color:#1b1630;font-family:var(--f-display);font-size:18px;padding:10px 18px;border-radius:6px;width:max-content;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.4);z-index:10;animation:toast 2.4s forwards}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,10px)}10%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+.footer-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+/* fill-in-the-blank */
+.wb{font-size:18px;line-height:1.9}
+.wb .lbl{font-family:var(--f-pixel);font-size:9px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.06em}
+.blank{display:inline-block;min-width:7em;padding:0 10px;margin:0 2px;border-bottom:3px solid var(--gold);color:var(--gold);font-family:var(--f-display);text-align:center;line-height:1.4}
+.blank.filled-ok{color:var(--ok);border-color:var(--ok)}
+.blank.filled-no{color:var(--bad);border-color:var(--bad)}
+.answer-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+.answer-row input{background:var(--night);border:2px solid var(--frame);border-radius:6px;padding:12px 14px;font-family:var(--f-display);font-size:22px;color:var(--text);min-width:0;width:100%}
+.answer-row input::placeholder{color:var(--muted);font-size:17px}
+.hintline{font-size:15px;color:var(--gold);background:rgba(243,195,79,.1);border:1px dashed var(--gold);border-radius:6px;padding:8px 12px}
+.hintline .cho{font-family:var(--f-display);font-size:22px;letter-spacing:.25em}
+.subrow{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:14px;padding:4px}
+.coach{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.coach .say{background:var(--frame);color:#2a2140;border-radius:10px;padding:8px 12px;font-size:15px;position:relative}
+.coach .say::before{content:"";position:absolute;left:-8px;top:50%;margin-top:-6px;border:6px solid transparent;border-right-color:var(--frame);border-left:0}
+/* ending letter */
+.letter{background:#f6efdc;color:#3a2a36;border-radius:8px;padding:26px 24px;display:grid;gap:14px;box-shadow:0 0 0 3px var(--frame),0 8px 0 rgba(0,0,0,.35);font-size:17px;line-height:1.85;max-width:62ch;margin:0 auto;width:100%}
+.letter h3{font-family:var(--f-display);font-size:26px;color:#8a3a55}
+.letter p{margin:0}
+.letter .sign{text-align:right;font-family:var(--f-display);font-size:20px;color:#8a3a55}
+.letter b{color:#8a3a55}
+.memories{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.mem{background:var(--panel-2);border-radius:6px;padding:10px 12px;font-size:14px;line-height:1.45}
+.mem .y{font-family:var(--f-pixel);font-size:9px;color:var(--gold);display:block;margin-bottom:4px}
+.pledge{display:grid;gap:12px;justify-items:center;text-align:center}
+.pledge .vow{font-family:var(--f-display);font-size:26px;color:var(--gold);line-height:1.4;text-wrap:balance}
+.hearts{position:relative;height:0}
+.heart{position:fixed;bottom:-20px;font-size:22px;color:#ef7b97;pointer-events:none;animation:rise 3.2s ease-in forwards;z-index:9}
+@keyframes rise{to{transform:translateY(-105vh) rotate(25deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important}}
+@media (max-width:520px){.arena{height:200px}.fighter.hero{left:6%}.fighter.foe{right:4%}.qtext{font-size:17px}}
+</style>
+
+<div id="app"></div>
+
+<script>
+/* ============ 빈칸 문항 (학습지 주제 12~19의 ㉠~㉥) ============
+   s: 문장. [] 자리가 빈칸 / a: 인정하는 답(첫 번째가 학습지 정답) */
+const Q=[];
+function B(t,mark,s,a,e){Q.push({t,mark,s,a,e})}
+
+B(12,'㉠','여운형, 안재홍 등이 조선 건국 동맹을 기반으로 [ ]를 조직하였다. 이 단체는 대부분의 시·군 지역과 직장에 지부를 설치하였고, 미군의 진주가 결정되자 조선 인민 공화국 수립을 선포하였다.',['조선 건국 준비 위원회','건준','조선건국준비위원회'],'줄여서 "건준"이라고 불러요. 지부를 지방 인민 위원회로 개편했어요.');
+B(12,'㉡','[ ]의 남한 통치: 주한 미군 사령관이 조선 총독부를 접수하고 친일 세력을 등용하였으며, 조선 인민 공화국과 대한민국 임시 정부를 인정하지 않았다.',['미군정'],'맥아더 포고 제1호(1945. 9. 9.)로 38도선 이남의 행정권을 미군이 갖게 되었어요.');
+B(12,'㉢','미군정 시기 1946년 9월 철도 노동자들의 총파업에 이어, 10월에는 [ ]에서 항쟁이 일어났다(식량 부족 및 경찰에 대한 반감 등이 폭발).',['대구'],'대구에서 시작된 항쟁은 주변 지역으로 확산되었어요.');
+B(12,'㉣','송진우, 김성수 등 우파 세력이 [ ]을 결성하였고, 박헌영은 조선 공산당을 재건하여 좌파 세력을 결집하였다.',['한국 민주당','한민당'],'한국 민주당은 반소·반공을 주장하고 친일파 처벌에는 미온적이었어요.');
+B(12,'㉥','모스크바 3국 외상 회의(1945. 12.)에서 민주주의 임시 정부 수립, 미소 공동 위원회 설치, 최고 5년의 [ ] 실시에 합의하였다.',['신탁 통치','신탁','신탁통치'],'김구·이승만 등 우파는 반대, 좌파와 중도 세력은 모스크바 결정을 지지해 크게 대립했어요.');
+
+B(13,'㉡','분단을 막고자 중도파인 여운형과 김규식이 좌우 합작 위원회를 결성하여 [ ]을 펼쳤으나, 여운형 암살과 제2차 미소 공동 위원회 결렬로 중단되었다.',['좌우 합작 운동','좌우 합작'],'좌우 합작 7원칙을 발표했지만 토지 개혁, 친일파 청산에서 의견이 충돌했어요.');
+B(13,'㉢','남북 협상(1948. 4.): [ ]와 김규식 등이 통일 정부 수립을 위해 평양으로 가 김일성, 김두봉과 회담하였다.',['김구'],'김구는 「삼천만 동포에게 읍고함」에서 "통일하면 살고 분열하면 죽는다"고 호소했어요.');
+B(13,'㉣','5·10 총선거(1948. 5. 10.)는 한반도 역사상 최초의 [ ]로, 이를 통해 제헌 국회가 구성되었다.',['보통 선거'],'김구, 김규식 등 많은 민족주의 인사는 남한 단독 선거에 반대해 참여하지 않았어요.');
+B(13,'㉤','[ ](1948): 1948년 4월 3일 남조선노동당 제주 지부를 중심으로 단독 정부 수립을 반대하는 무장봉기가 일어났고, 1954년까지 중산간 마을 주민 등에 대한 학살이 이루어졌다.',['제주 4·3 사건','제주 4.3 사건','4·3 사건','4.3 사건','제주 4·3','제주 43 사건'],'1947년 3·1절 기념 대회에서 경찰의 발포가 발단이었어요. 미군정은 경찰과 서북 청년단을 동원해 탄압했어요.');
+B(13,'㉥','대한민국 정부 수립 이후 북한에서는 최고 인민 회의를 구성하고 헌법을 제정하여 [ ]을 수상으로 선출하였다(1948. 9. 9.).',['김일성'],'"조선 민주주의 인민 공화국"이라는 이름으로 북한 정권이 수립되었어요.');
+
+B(14,'㉠','제헌 국회는 반민족 행위 처벌법을 제정하고, 김상덕을 위원장으로 하는 [ ](반민 특위)를 구성하였다(1948. 10.).',['반민족 행위 특별 조사 위원회','반민족행위특별조사위원회'],'반민 특위는 친일 기업가와 사회 지도층 등을 조사하고 기소했어요.');
+B(14,'㉡','이승만의 반공 담화, 경찰의 반민 특위 사무실 습격에 이어 [ ]으로 일부 국회 의원이 체포되었고, 국회는 반민법 시효를 단축하여 반민 특위가 해체되었다.',['국회 프락치 사건','프락치 사건'],'결국 친일파 청산은 제대로 이루어지지 못했고, 2004년에야 진상 규명 특별법이 만들어졌어요.');
+B(14,'㉢','농지 개혁은 지주들에게 농지를 매수한 후 농민에게 나누어 주는 "유상 매수, [ ]" 방식이었다. 농민들은 수확량의 150%를 5년에 나눠 상환하면 소유권을 인정받았다.',['유상 분배'],'그 결과 대다수 농민이 자작농이 되었어요.');
+B(14,'㉣','정부는 농지 매입의 대가로 지주에게 [ ]을 발행하여 귀속 재산을 살 수 있게 하였다. 지주를 산업 자본가로 바꾸려 하였으나 6·25 전쟁 등으로 실현되지 못하였다.',['지가 증권'],'"땅값(지가)을 증명하는 증권"이라고 기억하면 쉬워요.');
+B(14,'㉤','귀속 재산: 미군정은 [ ]이 남긴 산업 시설과 재산을 귀속 재산이라고 하여 관리하였다. 정부 수립 이후 이를 넘겨받은 이승만 정부는 민간인에게 매각하였다.',['일본인','일본'],'귀속 재산은 국가 총자산의 80%에 이르렀고, 이를 사들인 기업가들이 재벌로 성장했어요.');
+
+B(15,'㉠','북한은 소련과 중국의 지원 약속을 받고 1950년 6월 25일 기습 [ ]을 감행하였다. 이에 유엔은 16개국이 참여한 유엔군 파병을 결정하였다.',['남침'],'북한군은 3일 만에 서울을 점령했어요.');
+B(15,'㉡','국군과 유엔군은 [ ]으로 서울을 수복하고 압록강까지 진격하였다.',['인천 상륙 작전','인천 상륙','인천상륙작전'],'이후 중국군이 개입하면서 1·4 후퇴로 서울을 다시 빼앗겼어요.');
+B(15,'㉢','정전 협상은 [ ] 설정과 포로 교환 문제를 놓고 대립하였다. 협정 체결 순간 양측이 대치한 선으로 정하기로 하면서 전쟁 말기에 고지전이 치열해졌다.',['군사 분계선','군사분계선','휴전선'],'포로 문제는 공산군의 "무조건 본국 송환"과 유엔군의 "자유의사 존중"이 맞섰어요.');
+B(15,'㉣','6·25 전쟁의 영향: [ ](1953)을 체결하여 미군이 한반도에 주둔하게 되었고, 동아시아에서 미국의 영향력이 강화되었다.',['한미 상호 방위 조약','한미상호방위조약'],'정전 협정은 1953년 7월 27일에 체결되었어요.');
+B(15,'㉤','[ ]은 6·25 전쟁 특수로 경제 침체에서 벗어났고, 아시아의 반공 거점 국가로 자리 잡았다.',['일본'],'중국은 공산 진영에서 위상이 높아졌고, 미국은 여러 나라와 군사 동맹을 맺었어요.');
+
+B(16,'㉠','전후 미국으로부터 식량, 의복, 의약품 등의 생필품과 면직물, 설탕, 밀가루 같은 소비재 원료 등 [ ]이 들어왔다.',['원조 물자','원조물자','원조'],'원조 물자를 가공하는 삼백 산업(제분·제당·면방직)이 발달했어요.');
+B(16,'㉡','정부는 원조 물자를 팔아 회수한 대금의 상당수를 [ ]로 충당하여 산업 시설에 투자할 자금이 부족하였다.',['국방비'],'1950년대 말 무상 원조가 줄자 기업 파산과 실업이 늘었어요.');
+B(16,'㉢','북한은 농업 협동화 정책을 본격화하여 모든 토지를 농업 협동조합이 소유하게 하고, 개인의 상공업도 인정하지 않는 [ ] 경제 체제를 수립하였다.',['사회주의'],'북한은 사회주의 국가들의 원조로 1954년부터 3개년 계획을 실시했어요.');
+B(16,'㉣','광복과 전쟁으로 사람들의 이동이 많아지면서 대가족 중심의 가족 제도가 [ ] 중심의 가족 제도로 변화하였다.',['소가족'],'전쟁으로 남편을 잃은 여성들이 가장 역할을 하면서 가부장제도 변했어요.');
+B(16,'㉤','6·25 전쟁 중 초등학교 6년, 중학교 3년, 고등학교 3년으로 학제를 정비하고, 교육 기회 확대를 위해 야간제 중학교와 [ ]를 설립하였다.',['공민학교'],'천막 교실에서 공부한 "한글세대"가 민주화와 경제 성장의 원동력이 되었어요.');
+
+B(17,'㉠','[ ](1952): 이승만과 자유당은 직선제와 내각 책임제를 절충한 개헌안을 제출하고, 계엄령을 선포한 뒤 반대하는 국회 의원들을 연행하여 통과시켰다.',['발췌 개헌'],'이어서 1954년에는 사사오입 개헌으로 초대 대통령의 중임 제한을 없앴어요.');
+B(17,'㉡','자유당의 장기 집권이 가시화되자 거대 단일 야당을 결성하려는 움직임이 나타나 [ ]이 결성되었다(내각 책임제와 반공주의 지향).',['민주당'],'1956년 제3대 대선에서 민주당의 장면이 부통령에 당선되었어요.');
+B(17,'㉢','[ ]: 조봉암과 혁신 세력이 결성(1956)하여 민주 정치와 평화 통일을 주장하였다. 1958년 간첩 혐의로 해산되고 조봉암은 사형되었다.',['진보당'],'조봉암은 1956년 대선에서 무소속으로 30%를 얻었어요.');
+B(17,'㉣','[ ]: 학생들의 사상 통일과 군사 훈련을 위해 조직되었다. 중고등학교와 대학교의 모든 학생이 가입하여 총재인 이승만의 지시를 따랐다.',['학도 호국단','학도호국단'],'이승만 정부는 동상을 세우는 등 우상화도 추진했어요.');
+B(17,'㉥','[ ]: 천리마를 탄 것처럼 빠른 속도로 전후 복구와 경제 성장을 이룩하자는 북한의 운동으로, "하나는 전체를 위하여, 전체는 하나를 위하여"라는 구호 아래 주민을 통제하였다.',['천리마 운동','천리마'],'김일성은 8월 종파 사건(1956)으로 반대파를 숙청하고 주체사상을 내세웠어요.');
+
+B(18,'㉠','[ ]: 1960년 2월 28일 일요일, 교육 당국이 학생들의 야당 유세장 참석을 막으려 등교를 지시하자 대구 지역 고등학생들이 이에 항의하며 시위를 벌였다.',['2·28 민주 운동','2.28 민주 운동','228 민주 운동','2·28 민주운동'],'여러분 또래의 고등학생들이 4·19 혁명의 첫 불씨를 지폈어요.');
+B(18,'㉡','3월 15일 [ ] → 각 지역에서 항의 시위가 일어났고, 마산에서는 경찰의 발포로 다수의 희생자가 발생하였다. 학생 김주열이 최루탄을 맞고 사망하였다.',['3·15 부정 선거','3.15 부정 선거','315 부정 선거','부정 선거','부정선거'],'자유당은 이기붕을 부통령에 당선시키려 3인조·9인조 공개 투표 등을 계획했어요.');
+B(18,'㉢','4·19 혁명의 의의: 학생을 비롯한 시민들이 [ ]을 무너뜨린 민주 혁명으로, 이후 한국 민주화 운동의 밑거름이 되었다.',['독재 정권','독재'],'4월 26일 이승만이 대통령직에서 물러났어요.');
+B(18,'㉣','4·19 혁명 이후 대통령 중심제를 폐지하고 내각 책임제와 [ ]를 주요 내용으로 헌법을 개정하였다. 이후 장면 내각이 출범하였다.',['양원제'],'국회를 민의원과 참의원 두 개로 나누는 것이 양원제예요.');
+B(18,'㉥','[ ] 주도의 통일 운동: 대학생들이 남북 학생 회담을 주장하고 혁신계 정당과 사회단체가 이를 지지하였다. 장면 내각은 이에 반대하였다.',['민간'],'"이남 전기, 이북 쌀" 같은 구호가 이때 등장했어요.');
+
+B(19,'㉠','5·16 군사 정변으로 권력을 잡은 박정희와 군인들은 [ ]를 구성하여 입법, 행정, 사법의 모든 권력을 장악하였다.',['국가 재건 최고 회의','국가재건최고회의'],'비판 세력 감시를 위해 중앙정보부도 조직했어요.');
+B(19,'㉡','한일 협정 체결: 1965년 [ ]과 한일 청구권 협정 등의 부속 협정을 체결하였으나, 식민 지배에 대한 사과와 배상은 명시되지 않았다.',['한일 기본 조약','한일기본조약'],'이에 앞서 1964년 굴욕 외교에 반대하는 6·3 시위가 일어났어요.');
+B(19,'㉢','베트남 파병의 대가로 미국은 군사 원조와 [ ] 제공을 약속하고, 한국군의 현대화와 한국 기업의 베트남 건설 사업 참여를 보장하였다.',['차관'],'고엽제 피해, 라이따이한 문제, 베트남 민간인 피해는 남은 과제예요.');
+B(19,'㉣','제1, 2차 경제 개발 5개년 계획(1962~1971): 섬유·봉제·신발 등 [ ]과 화학 비료·시멘트·정유 등 기간 산업을 육성하였다.',['경공업'],'저임금에 기댄 노동 집약적 수출 산업이었어요. 1970년 전태일은 "근로 기준법을 준수하라"고 외쳤어요.');
+B(19,'㉤','3선 개헌(1969): 여당이 대통령의 [ ] 연임을 허용하는 헌법 개정을 추진하였고, 여당 의원만 따로 모여 편법으로 개헌안을 통과시켰다.',['3회','세 번','3번','삼회','세번'],'국민, 야당, 재야 세력이 반대 투쟁을 벌였어요.');
+
+Q.forEach((q,i)=>q.id=i);
+
+/* ============ 스테이지 ============ */
+const STAGES=[
+ {id:12,num:'12',title:'8·15 광복을 맞이하다',place:'광복의 거리',years:'1945–1946',sky:'#2b3a78',ground:'#4a4a3a',memory:'광복의 기쁨, 그리고 갈라진 길',
+  brief:'1945년 8월 15일, 드디어 광복이에요! 여운형은 조선 건국 준비 위원회를 만들었고, 38도선 남쪽엔 미군, 북쪽엔 소련군이 들어왔어요. 모스크바 3국 외상 회의의 "신탁 통치" 결정을 두고 좌우가 크게 갈라졌지요.',
+  foes:[['망각의 안개','ghost','#9aa3c7',1,20],['왜곡의 잉크','blob','#6b5bd1',1,20],['분할의 그림자','ghost','#7d4fc1',3,25,true]]},
+ {id:13,num:'13',title:'대한민국 정부를 수립하다',place:'갈림길의 서울',years:'1946–1948',sky:'#33306e',ground:'#4b3f36',memory:'통일 정부를 향한 간절한 노력',
+  brief:'미소 공동 위원회 결렬 → 정읍 발언 → 좌우 합작 운동 → 유엔 총선거 결정 → 남북 협상 → 5·10 총선거 → 정부 수립(1948. 8. 15.). 제주 4·3 사건의 아픔도 꼭 기억해 주세요.',
+  foes:[['갈라진 지도','scroll','#c9b27c',1,20],['냉전의 안개','ghost','#7fa2c9',1,20],['분단의 망령','ghost','#c15a7d',3,25,true]]},
+ {id:14,num:'14',title:'식민지 잔재 청산을 위해 노력하다',place:'반민 특위 청사',years:'1948–1950',sky:'#3a2f5c',ground:'#3e3a2e',memory:'바로 세우려 했던 정의',
+  brief:'반민법 제정 → 반민 특위 활동 → 이승만의 비판 담화, 경찰의 습격, 국회 프락치 사건으로 해체. 농지 개혁은 유상 매수·유상 분배! 귀속 재산은 민간에 팔려 재벌 성장의 바탕이 되었어요.',
+  foes:[['찢어진 조서','scroll','#d8c69a',1,20],['검은 장부','blob','#5a6a8a',1,20],['청산을 막는 그림자','helmet','#6f7b5a',3,25,true]]},
+ {id:15,num:'15',title:'6·25 전쟁, 한국인의 삶을 파괴하다',place:'전선의 고지',years:'1950–1953',sky:'#4a2d3a',ground:'#3d3326',memory:'전쟁을 견뎌 낸 사람들',
+  brief:'애치슨 라인 → 북한군 남침 → 인천 상륙 작전 → 중국군 개입·1·4 후퇴 → 전선 교착·고지전 → 정전 협정(1953. 7. 27.). 수많은 전쟁고아와 이산가족의 아픔도 함께 기억해요.',
+  foes:[['포연의 망령','ghost','#b0a39a',1,20],['고지의 철모','helmet','#6c7a52',1,22],['전쟁의 철갑병','helmet','#8a4a3a',3,26,true]]},
+ {id:16,num:'16',title:'전후 복구를 위해 노력하다',place:'판잣집 마을',years:'1953–1950년대 말',sky:'#2f4a6a',ground:'#544632',memory:'폐허 위 천막 교실의 꿈',
+  brief:'남한은 미국 원조로 삼백 산업이, 북한은 사회주의 국가 원조와 농업 협동화로 복구했어요. 판잣집, 소가족, 여성 가장, 천막 학교에서 자란 한글세대를 기억해요.',
+  foes:[['굶주림 슬라임','blob','#d9cfa8',1,20],['원조 포대 미믹','box','#c8b98e',1,22],['가난의 그림자','ghost','#5b6b7d',3,25,true]]},
+ {id:17,num:'17',title:'남과 북, 독재 체제를 구축하다',place:'개헌의 의사당',years:'1952–1958',sky:'#2d2b55',ground:'#3a3048',memory:'억눌려도 꺼지지 않은 목소리',
+  brief:'이승만은 발췌 개헌(1952)·사사오입 개헌(1954)으로 장기 집권을 꾀했고, 진보당 사건(1958)으로 조봉암을 사형시켰어요. 북한은 8월 종파 사건, 천리마 운동, 주체사상으로 김일성 독재를 강화했지요.',
+  foes:[['반올림 골렘','helmet','#7d7aa8',1,22],['검열의 눈','eye','#c94f5a',1,22],['독재의 철갑병','helmet','#a8803a',3,26,true]]},
+ {id:18,num:'18',title:'4·19 혁명으로 민주주의가 확대되다',place:'경무대 가는 길',years:'1960–1961',sky:'#22456a',ground:'#3f4a3a',memory:'학생들이 지켜 낸 민주주의',
+  brief:'2·28 민주 운동 → 3·15 부정 선거·마산 의거 → 김주열 → 4·19 → 교수단 시국 선언 → 이승만 하야. 여러분 또래의 학생들이 앞장선 혁명이에요.',
+  foes:[['유령 유권자','ghost','#b9c3e8',1,22],['3인조 투표함','box','#8e6a4a',1,22],['부정 투표함 대왕','box','#b83b45',3,27,true]]},
+ {id:19,num:'19',title:'5·16 군사 정변으로 민주주의가 후퇴하다',place:'군정의 청사',years:'1961–1969',sky:'#3a2a4a',ground:'#45403a',memory:'성장의 그늘에서 외친 이름',
+  brief:'5·16 군사 정변 → 국가 재건 최고 회의·중앙정보부 → 박정희 당선(1963) → 6·3 시위·한일 협정(1965) → 베트남 파병 → 경제 개발 5개년 계획 → 3선 개헌(1969). 전태일도 잊지 말아요.',
+  foes:[['감시의 눈','eye','#8fa3c9',1,22],['계엄의 철모','helmet','#5f6b4a',1,24],['정변의 장막','eye','#9a3a8a',3,27,true]]},
+ {id:'final',num:'끝',title:'최종 결전 · 중간고사 대비',place:'기억의 전당',years:'1945–1969',sky:'#1c1838',ground:'#2c2440',memory:'',
+  brief:'여기까지 와 준 여러분, 정말 자랑스러워요. 망각의 군주가 1945년부터 1969년까지의 기억을 모두 삼키려 해요. 주제 12~19 전체의 빈칸에서 문제가 나와요. 우리가 함께 배운 이야기를 떠올리며 끝까지 지켜 내요!',
+  foes:[['혼돈의 연표','scroll','#f3c34f',3,24],['기억 포식자','blob','#b84a6a',3,26],['망각의 군주','king','#6b3fa0',6,30,true]]}
+];
+const CLASSES={
+  sagwan:{name:'사관',desc:'역사를 기록하는 관리. 최대 HP +30',hair:'#2b1d14',coat:'#2f6b5a'},
+  reporter:{name:'기자',desc:'사건을 취재하는 기자. 초성 힌트 +2',hair:'#4a2a18',coat:'#7a3a3a'},
+  detective:{name:'탐정',desc:'단서를 잇는 탐정. 2연속 정답부터 치명타',hair:'#1b1b2b',coat:'#3a4a7a'}
+};
+
+/* ============ 픽셀 스프라이트 ============ */
+const SPR={
+teacher:[
+'.......KKKKKK.......','.....KKHHHHHHKK.....','....KHHhhHHHHHHK....','...KHHhHHHHHHHHHKRR.','...KHHHHHHHHHHHHRRRR','...KHHSSSSSSSSHHKRR.',
+'...KHSSSSSSSSSSHK...','...KHSSEWSSEWSSHK...','...KHSSEESSEESSHK...','...KHSPSSSSSSPSHK...','...KHHSSSLLSSSHHK...','..KHHHKSSSSSSKHHHK..',
+'..KHHHHKSSSSKHHHHK..','..KHHHKDWWWWDKHHHK..','..KHHKDDDWWDDDKHHK..','..KHKSDDDDDDDDSKHK..','...KKSDDDRRDDDSKK...','....KSDDDDDDDDSK....',
+'.....KDDDDDDDDK.....','....KDDDdDDdDDDK....','...KDDDdDDDDdDDDK...','..KDDDdDDDDDDdDDDK..','..KddddddddddddddK..','..KKKKKKKKKKKKKKKK..',
+'......KSK..KSK......','......KSK..KSK......','.....KKKK..KKKK.....'],
+hero:[
+'.....KKKKK......','....KHHHHHK.....','...KHHHHHHHK....','...KHSSSSSHK....','...KSWKSWKSK....','...KSSSSSSSK....','....KSSRSSK.....','...KKBBBBBKK....',
+'..KSKBWWWBKSK...','..KSKBBGBBKSK...','..KKKBBBBBKKK...','....KBBBBBK.....','....KNNKNNK.....','....KNNKNNK.....','....KKK.KKK.....','................'],
+ghost:[
+'.....XXXXXX.....','...XXXXXXXXXX...','..XXXXXXXXXXXX..','.XXXXXXXXXXXXXX.','.XXXWWXXXXWWXXX.','.XXXWKXXXXWKXXX.','XXXXWKXXXXWKXXXX','XXXXXXXXXXXXXXXX',
+'XXXXXXXRRXXXXXXX','XXXXXXRDDRXXXXXX','XXXXXXXRRXXXXXXX','XXXXXXXXXXXXXXXX','XLXXXXXXXXXXXXLX','XXX.XXXX.XXXX.XX','XX...XX...XX...X','X.....X....X....'],
+blob:[
+'................','................','.......XX.......','......XXXX......','.....XXLLXX.....','....XXLXXXXX....','...XXWWXXWWXX...','..XXXWKXXWKXXX..',
+'..XXXXXXXXXXXX..','.XXXXXKKKKXXXXX.','.XXXXXXRRXXXXXX.','XXXXXXXXXXXXXXXX','XXXXXXXXXXXXXXXX','.XXXXXXXXXXXXXX.','..DDDDDDDDDDDD..','................'],
+box:[
+'................','..KKKKKKKKKKKK..','..KXXXXXXXXXXK..','..KXXXKKKKXXXK..','..KKKKKKKKKKKK..','..KWKWKWKWKWKK..','..KDDDDDDDDDDK..','..KRRRRRRRRRRK..',
+'..KWKWKWKWKWKK..','..KKKKKKKKKKKK..','..KXXXXXXXXXXK..','..KXXXLLLLXXXK..','..KXXXLXXLXXXK..','..KXXXXXXXXXXK..','..KKKKKKKKKKKK..','................'],
+helmet:[
+'.....KKKKKK.....','...KKXXXXXXKK...','..KXXLXXXXXXXK..','..KXXXXXXXXXXK..','.KKKKKKKKKKKKKK.','..KDDDDDDDDDDK..','..KDRRDDDDRRDK..','..KDDDDDDDDDDK..',
+'...KDDDDDDDDK...','....KKKKKKKK....','...KXXXXXXXXK...','..KXXXGXXGXXXK..','..KXXXXXXXXXXK..','..KXXXXXXXXXXK..','...KK......KK...','...KK......KK...'],
+eye:[
+'................','......KKKK......','....KKWWWWKK....','...KWWWWWWWWK...','..KWWWXXXXWWWK..','.KWWWXXDDXXWWWK.','KWWWXXDDDDXXWWWK','KWWWXXDDDDXXWWWK',
+'.KWWWXXDDXXWWWK.','..KWWWXXXXWWWK..','...KWWWWWWWWK...','....KKWWWWKK....','......KKKK......','.....R..R..R....','....R...R...R...','................'],
+scroll:[
+'................','..KKKKKKKKKKKK..','.KLLLLLLLLLLLLK.','..KXXXXXXXXXXK..','..KXKKKKKKKXXK..','..KXXXXXXXXXXK..','..KXKKKKKXXXXK..','..KXXWKXXWKXXK..',
+'..KXKKKKKKKKXK..','..KXXXXRRXXXXK..','..KXKKKXXXXXXK..','..KXXXXXXXXX.K..','..KXKKKKKX......','..KXXXXX........','..KKKK..........','................'],
+king:[
+'...G..G..G..G...','...GG.GG.GG.GG..','...GGGGGGGGGGG..','..XXXXXXXXXXXXX.','.XXXXXXXXXXXXXXX','.XXXWWXXXXXWWXXX','XXXXWRXXXXXWRXXX','XXXXXXXXXXXXXXXX',
+'XXXXXKKKKKKXXXXX','XXXXKWKWKWKKXXXX','XXXXXKKKKKKXXXXX','XXXXXXXXXXXXXXXX','XLXXXXXXXXXXXXLX','XXX.XXXX.XXXX.XX','XX...XX...XX...X','X.....X....X....']
+};
+function shade(hex,amt){const n=parseInt(hex.slice(1),16);let r=(n>>16)+amt,g=((n>>8)&255)+amt,b=(n&255)+amt;r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return'#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0')}
+function sprite(name,color,scale,extra){
+  const map=SPR[name],w=Math.max(...map.map(r=>r.length)),h=map.length;
+  const c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;c.className='sprite';
+  const x=c.getContext('2d');
+  const pal=Object.assign({X:color,L:shade(color,50),D:shade(color,-70),K:'#0c0d1c',W:'#f6f2e6',R:'#e5585f',G:'#f3c34f',H:'#2b1d14',S:'#f1c9a0',B:'#2f6b5a',N:'#4a4e66'},extra||{});
+  map.forEach((row,y)=>{for(let i=0;i<row.length;i++){const ch=row[i];if(ch==='.')continue;x.fillStyle=pal[ch]||color;x.fillRect(i*scale,y*scale,scale,scale)}});
+  return c;
+}
+function heroSprite(cls,scale){const k=CLASSES[cls]||CLASSES.sagwan;return sprite('hero','#000',scale,{H:k.hair,B:k.coat})}
+// 도윤쌤: 긴 웨이브 머리, 리본, 분홍 원피스
+function teacher(scale){return sprite('teacher','#000',scale,{H:'#4a2a1e',h:'#7a4a34',S:'#f8d9bf',E:'#2a1a22',P:'#f4a0ae',L:'#d9536b',D:'#ec8aa3',d:'#c9637f',R:'#fff1a8',W:'#fffaf0'})}
+
+/* ============ 상태 & 저장 ============ */
+const KEY='hk-memory-rpg-v2';
+let S={screen:'title',player:null,battle:null,unlockAll:false,sound:true,tmpCls:'sagwan',lastResult:null};
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&d.player){S.player=d.player;S.unlockAll=!!d.unlockAll;S.sound=d.sound!==false}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({player:S.player,unlockAll:S.unlockAll,sound:S.sound}))}catch(e){}}
+function newPlayer(name,cls){
+  const p={name:name||'원정대원',cls,lv:1,exp:0,maxHp:100,hp:100,potions:2,hints:3,cleared:{},wrong:{},stats:{c:0,t:0},pledged:false};
+  if(cls==='sagwan'){p.maxHp=130;p.hp=130}
+  if(cls==='reporter'){p.hints=5}
+  return p;
+}
+const expNeed=lv=>30+lv*20;
+
+/* ============ 소리 ============ */
+let AC=null;
+function beep(type){
+  if(!S.sound)return;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();}catch(e){return}
+  const seq={ok:[[660,.07],[880,.09]],crit:[[660,.05],[880,.05],[1175,.1]],bad:[[220,.12],[160,.16]],lv:[[523,.08],[659,.08],[784,.08],[1047,.16]],win:[[392,.1],[523,.1],[659,.1],[784,.22]],tap:[[520,.03]],heal:[[600,.06],[750,.08]],
+    love:[[523,.18],[659,.18],[784,.18],[1047,.4],[988,.18],[1047,.5]]}[type]||[];
+  let t=AC.currentTime;
+  seq.forEach(([f,d])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=type==='love'?'triangle':'square';o.frequency.value=f;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d);t+=d});
+}
+
+/* ============ 유틸 ============ */
+const $=s=>document.querySelector(s);
+const app=document.getElementById('app');
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2500)}
+function stars(acc){return acc>=.9?3:acc>=.7?2:1}
+function stageById(id){return STAGES.find(s=>String(s.id)===String(id))}
+function isOpen(i){
+  if(S.unlockAll)return true;
+  const st=STAGES[i];
+  if(st.id==='final')return STAGES.slice(0,8).every(s=>S.player.cleared[s.id]);
+  return i===0||!!S.player.cleared[STAGES[i-1].id];
+}
+const norm=s=>String(s).replace(/[\s·‧ㆍ・.\-()（）'"]/g,'').toLowerCase();
+function isCorrect(q,v){const n=norm(v);return !!n&&q.a.some(a=>norm(a)===n)}
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function chosung(s){return [...s].map(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&c<11172?CHO[Math.floor(c/588)]:ch}).join('')}
+function sentence(q,fill,state){
+  const parts=esc(q.s).split('[ ]');
+  const blank=`<span class="blank ${state||''}">${fill?esc(fill):q.mark}</span>`;
+  return parts.join(blank);
+}
+const CHEER=['정답! 역시 우리 원정대예요.','완벽해요! 학습지 빈칸 그대로예요.','좋아요, 그 기억 꼭 붙잡아 두세요!','멋져요! 선생님이 다 뿌듯하네요.','바로 그거예요! 이제 시험에서도 문제없어요.'];
+const COMFORT=['괜찮아요, 몇 문제 뒤에 다시 나오니 꼭 맞혀 봐요.','틀려도 괜찮아요. 지금 기억하면 돼요!','아쉬워요! 정답을 소리 내어 한 번 읽어 볼까요?','실수는 기억의 시작이에요. 다시 도전!'];
+const pick=a=>a[Math.random()*a.length|0];
+
+/* ============ 화면: 타이틀 ============ */
+function renderTitle(){
+  const has=!!S.player;
+  app.innerHTML=`
+  <section class="win title-hero">
+    <div class="eyebrow">KOREAN HISTORY RPG · TOPIC 12–19</div>
+    <h1>한국사 기억 원정대</h1>
+    <div class="sub">광복에서 3선 개헌까지 · 학습지 빈칸 복습</div>
+    <div class="title-sprites" id="tsp"></div>
+    <p class="story">망각의 군주가 1945년부터 1969년까지의 기억을 흐리고 있어요. 도윤쌤과 함께 여덟 시대를 여행하며 <b class="gold">학습지의 빈칸</b>을 채워 몬스터를 물리치고, 마지막 기억의 전당에서 우리 역사를 되찾아 주세요.</p>
+  </section>
+  ${has?`<section class="win" style="display:grid;gap:12px">
+    <h2 style="font-size:24px">이어서 하기</h2>
+    <div class="muted">${esc(S.player.name)} · ${CLASSES[S.player.cls].name} · LV ${S.player.lv} · 클리어 ${Object.keys(S.player.cleared).length}/9</div>
+    <div class="row"><button class="btn primary" id="cont">원정 계속하기 ▶</button><button class="btn" id="newg">새로 시작</button></div>
+  </section>`:''}
+  <section class="win" id="newbox" style="display:${has?'none':'grid'};gap:14px">
+    <h2 style="font-size:24px">원정대원 등록</h2>
+    <div class="field"><label for="pname">이름</label><input id="pname" maxlength="12" placeholder="예: 1학년 3반 김도윤" autocomplete="off"></div>
+    <div class="field"><label>직업 선택</label>
+      <div class="classes">${Object.entries(CLASSES).map(([k,c])=>`<button class="cls" data-cls="${k}" aria-pressed="${S.tmpCls===k}"><span class="sp" data-k="${k}"></span><b>${c.name}</b><span>${c.desc}</span></button>`).join('')}</div>
+    </div>
+    <label class="check"><input type="checkbox" id="unlock" ${S.unlockAll?'checked':''}> 모든 지역 열기 (선생님용 · 원하는 주제부터 복습)</label>
+    <div><button class="btn primary" id="start">원정 출발 ▶</button></div>
+  </section>`;
+  const tsp=$('#tsp');
+  const tch=teacher(5);tch.title='도윤쌤';
+  tsp.append(heroSprite('sagwan',5),tch,sprite('ghost','#7d4fc1',4),sprite('king','#6b3fa0',5));
+  [...tsp.children].forEach((c,i)=>{if(i>1)c.classList.add('bob');c.style.animationDelay=(i*.2)+'s'});
+  document.querySelectorAll('.cls .sp').forEach(el=>{el.replaceWith(heroSprite(el.dataset.k,3))});
+  document.querySelectorAll('.cls').forEach(b=>b.onclick=()=>{S.tmpCls=b.dataset.cls;document.querySelectorAll('.cls').forEach(x=>x.setAttribute('aria-pressed',x===b));beep('tap')});
+  if(has){$('#cont').onclick=()=>{beep('tap');go('map')};$('#newg').onclick=()=>{$('#newbox').style.display='grid';$('#pname').focus()}}
+  $('#start').onclick=()=>{S.unlockAll=$('#unlock').checked;S.player=newPlayer($('#pname').value.trim(),S.tmpCls);save();beep('win');go('map')};
+}
+
+/* ============ HUD ============ */
+function hudHTML(inBattle){
+  const p=S.player,b=S.battle;
+  return `<section class="win hud">
+    <div class="who">${esc(p.name)}<small>${CLASSES[p.cls].name} · <span class="pix gold">LV ${p.lv}</span></small></div>
+    <div class="bars">
+      <div class="bar"><span class="pix" style="color:var(--hp)">HP</span><div class="track"><div class="fill hp" style="width:${Math.max(0,p.hp/p.maxHp*100)}%"></div></div><span class="pix num">${Math.max(0,p.hp)}/${p.maxHp}</span></div>
+      <div class="bar"><span class="pix" style="color:var(--exp)">EXP</span><div class="track"><div class="fill exp" style="width:${p.exp/expNeed(p.lv)*100}%"></div></div><span class="pix num">${p.exp}/${expNeed(p.lv)}</span></div>
+    </div>
+    <div class="items">
+      <button class="item" id="usePot" ${!inBattle||!p.potions||p.hp>=p.maxHp||(b&&b.locked)?'disabled':''} title="HP 40 회복">회복약 <span class="cnt">×${p.potions}</span></button>
+      <button class="item" id="useHint" ${!inBattle||!p.hints||(b&&(b.locked||b.hintUsed))?'disabled':''} title="정답의 초성과 글자 수 보기">초성 힌트 <span class="cnt">×${p.hints}</span></button>
+      <button class="item" id="snd" title="소리 켜기/끄기">${S.sound?'소리 켬':'소리 끔'}</button>
+    </div>
+  </section>`;
+}
+function refreshHud(inBattle){const hud=document.querySelector('.hud');if(hud){hud.outerHTML=hudHTML(inBattle);bindHud()}}
+function bindHud(){
+  const s=$('#snd');if(s)s.onclick=()=>{S.sound=!S.sound;save();s.textContent=S.sound?'소리 켬':'소리 끔';beep('tap')};
+  const pot=$('#usePot');if(pot)pot.onclick=usePotion;
+  const h=$('#useHint');if(h)h.onclick=useHint;
+}
+
+/* ============ 지도 ============ */
+function renderMap(){
+  const p=S.player,wrongN=Object.keys(p.wrong).length;
+  const acc=p.stats.t?Math.round(p.stats.c/p.stats.t*100):0;
+  app.innerHTML=hudHTML(false)+`
+  <section class="win" style="display:grid;gap:16px">
+    <div class="map-head">
+      <div><div class="pix gold">TIMELINE MAP</div><h2>시간의 연표 지도</h2></div>
+      <div class="muted" style="font-size:14px">누적 정답률 <b class="pix gold">${acc}%</b> · 채운 빈칸 ${p.stats.t}개</div>
+    </div>
+    <div class="timeline">
+      ${STAGES.map((s,i)=>{
+        const open=isOpen(i),cl=p.cleared[s.id];
+        return `<button class="node ${cl?'clear':open?'open':''} ${s.id==='final'?'final':''}" data-id="${s.id}" ${open?'':'disabled'}>
+          <span class="num">${s.id==='final'?'BOSS':'주제 '+s.num}</span>
+          <span style="min-width:0"><span class="t">${s.title}</span><br><span class="y">${s.place} · ${s.years}${s.id==='final'?'':' · 빈칸 5개'}</span></span>
+          <span class="st">${cl?`<span class="stars">${'★'.repeat(cl.stars)}${'☆'.repeat(3-cl.stars)}</span><br><span class="muted">${cl.acc}%</span>`:open?'<span style="color:var(--exp)">도전</span>':'잠김'}</span>
+        </button>`}).join('')}
+    </div>
+  </section>
+  <section class="win footer-row">
+    <div class="row">
+      <button class="btn" id="notes">오답 노트 <span class="pix gold">${wrongN}</span></button>
+      <button class="btn" id="practice" ${wrongN?'':'disabled'}>오답 정복 전투</button>
+      ${p.cleared.final?'<button class="btn" id="letter">도윤쌤의 편지</button>':''}
+    </div>
+    <button class="btn" id="title">처음 화면</button>
+  </section>`;
+  bindHud();
+  document.querySelectorAll('.node').forEach(b=>b.onclick=()=>{beep('tap');S.pending=b.dataset.id;go('brief')});
+  $('#notes').onclick=()=>go('notes');
+  $('#practice').onclick=()=>{beep('tap');startBattle('practice')};
+  $('#title').onclick=()=>go('title');
+  const l=$('#letter');if(l)l.onclick=()=>{S.lastResult=S.lastResult||{acc:p.cleared.final.acc,missed:[]};go('ending')};
+}
+
+/* ============ 브리핑 ============ */
+function renderBrief(){
+  const st=stageById(S.pending);
+  app.innerHTML=hudHTML(false)+`
+  <section class="win" style="display:grid;gap:16px">
+    <div><div class="pix gold">${st.id==='final'?'FINAL':'TOPIC '+st.num} · ${st.years}</div><h2 style="font-size:30px">${st.place}</h2><div class="muted">${st.title}</div></div>
+    <div class="talk"><span id="sg"></span><div><div class="name">도윤쌤</div><p>${st.brief}</p></div></div>
+    <div class="note" style="gap:8px"><div class="tag">이번 지역의 적</div>
+      <div class="row" id="foes" style="gap:18px;align-items:flex-end"></div>
+      <div class="muted" style="font-size:14px">${st.id==='final'?'주제 12~19 빈칸 40개 중 무작위로 출제돼요.':'학습지 빈칸 5개가 나와요.'} 답을 직접 입력하세요. 띄어쓰기와 가운뎃점(·)은 달라도 괜찮아요. 틀린 빈칸은 몇 문제 뒤에 다시 나와요.</div>
+    </div>
+    <div class="row"><button class="btn primary" id="go">전투 시작 ▶</button><button class="btn" id="back">지도로</button></div>
+  </section>`;
+  bindHud();
+  $('#sg').append(teacher(4));
+  st.foes.forEach(f=>{const w=document.createElement('div');w.style.cssText='display:grid;justify-items:center;gap:4px;font-size:13px';w.append(sprite(f[1],f[2],f[5]?4:3));const l=document.createElement('span');l.textContent=f[0]+(f[5]?' (보스)':'');l.className=f[5]?'gold':'muted';w.append(l);$('#foes').append(w)});
+  $('#go').onclick=()=>{beep('tap');startBattle(st.id)};
+  $('#back').onclick=()=>go('map');
+}
+
+/* ============ 전투 ============ */
+function startBattle(id){
+  const p=S.player;let st,pool;
+  if(id==='practice'){
+    pool=Object.keys(p.wrong).map(Number).map(i=>Q[i]).filter(Boolean);
+    const hp=Math.max(1,Math.min(8,pool.length));
+    st={id:'practice',num:'오답',title:'오답 정복 전투',place:'오답의 미궁',years:'복습',sky:'#24304f',ground:'#33304a',foes:[['오답의 메아리','ghost','#5bb6f2',hp,18,true]]};
+  }else{
+    st=stageById(id);pool=id==='final'?Q.slice():Q.filter(q=>q.t===st.id);
+  }
+  p.hp=p.maxHp;
+  S.battle={st,foes:st.foes.map(f=>({name:f[0],spr:f[1],color:f[2],hits:f[3],hp:f[3],atk:f[4],boss:!!f[5]})),fi:0,
+    queue:shuffle(pool),pool,streak:0,c:0,t:0,missed:new Set(),q:null,locked:false,hintUsed:false,practice:id==='practice'};
+  go('battle');nextQ();
+}
+function nextQ(){
+  const b=S.battle;
+  if(!b.queue.length){b.queue=shuffle(b.pool.filter(q=>!b.q||q.id!==b.q.id||b.pool.length===1))}
+  b.q=b.queue.shift();b.locked=false;b.hintUsed=false;
+  renderBattle();
+}
+function renderBattle(){
+  const b=S.battle,foe=b.foes[b.fi],q=b.q,st=b.st;
+  const label=st.id==='practice'?'오답 정복':st.id==='final'?'최종 결전':'주제 '+st.num;
+  app.innerHTML=hudHTML(true)+`
+  <section class="arena" id="arena" style="--sky:linear-gradient(${st.sky},${shade(st.sky,-30)});--ground:${st.ground}">
+    <div class="stage-tag">${label} · ${st.place}</div>
+    <div class="wave">적 ${b.fi+1}/${b.foes.length}</div>
+    ${b.streak>=2?`<div class="streak">${b.streak} COMBO${critOn()?' · CRITICAL':''}</div>`:''}
+    <div class="fighter hero" id="heroF"></div>
+    <div class="fighter foe" id="foeF"><div class="foe-name ${foe.boss?'gold':''}">${esc(foe.name)}${foe.boss?' ♛':''}</div><div class="pips">${Array.from({length:foe.hits},(_,i)=>`<span class="pip ${i<foe.hp?'':'off'}"></span>`).join('')}</div></div>
+  </section>
+  <section class="win dlg" id="dlg">
+    <div class="meta"><span class="pix gold">빈칸 채우기 · 주제 ${q.t} ${q.mark}</span><span class="pix muted">정답 ${b.c}/${b.t}</span></div>
+    <div class="wb" id="wb"><span class="lbl">학습지 주제 ${q.t}</span>${sentence(q)}</div>
+    <div id="hint"></div>
+    <form class="answer-row" id="af" autocomplete="off">
+      <input id="ans" type="text" placeholder="${q.mark}에 들어갈 말을 입력하세요" aria-label="${q.mark}에 들어갈 답" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="btn primary" type="submit">공격 ▶</button>
+    </form>
+    <div class="subrow"><span class="muted" style="font-size:13px">Enter 키로 제출</span><button class="linkbtn" id="pass" type="button">모르겠어요 (정답 보기)</button></div>
+    <div id="fb"></div>
+  </section>`;
+  bindHud();
+  $('#heroF').append(heroSprite(S.player.cls,5));
+  const fs=sprite(foe.spr,foe.color,foe.boss?7:5);fs.classList.add('bob');$('#foeF').prepend(fs);
+  $('#af').onsubmit=e=>{e.preventDefault();if(b.locked)return;const v=$('#ans').value;if(!norm(v)){$('#ans').focus();return}answer(isCorrect(q,v),v)};
+  $('#pass').onclick=()=>{if(!b.locked)answer(false,'')};
+  setTimeout(()=>{const i=$('#ans');if(i)i.focus({preventScroll:true})},50);
+}
+function critOn(){const b=S.battle;return b.streak>=(S.player.cls==='detective'?2:3)}
+function floatDmg(target,text,color){
+  const ar=$('#arena');if(!ar)return;const el=document.createElement('div');el.className='dmg';el.textContent=text;el.style.color=color;
+  const r=target.getBoundingClientRect(),a=ar.getBoundingClientRect();
+  el.style.left=(r.left-a.left+r.width/2-20)+'px';el.style.top=(r.top-a.top+10)+'px';ar.append(el);setTimeout(()=>el.remove(),1000);
+}
+function answer(ok,typed){
+  const b=S.battle,p=S.player,q=b.q,foe=b.foes[b.fi];
+  b.locked=true;b.t++;p.stats.t++;
+  $('#ans').disabled=true;document.querySelector('#af button').disabled=true;$('#pass').disabled=true;
+  $('#wb').innerHTML=`<span class="lbl">학습지 주제 ${q.t}</span>`+sentence(q,q.a[0],ok?'filled-ok':'filled-no');
+  const heroF=$('#heroF'),foeF=$('#foeF');
+  let msg='';
+  if(ok){
+    b.c++;p.stats.c++;b.streak++;
+    const crit=critOn(),dmg=crit?2:1;
+    foe.hp=Math.max(0,foe.hp-dmg);
+    heroF.classList.add('lunge');setTimeout(()=>{foeF.firstChild&&foeF.firstChild.classList.add('hit');floatDmg(foeF,crit?'-'+dmg+' CRIT!':'-'+dmg,crit?'#f3c34f':'#fff')},150);
+    beep(crit?'crit':'ok');
+    const g=foe.boss?15:10;p.exp+=g;msg+=`<span class="pix" style="color:var(--exp)">+${g} EXP</span>`;
+    if(b.practice&&p.wrong[q.id]!=null){delete p.wrong[q.id];msg+=' <span class="muted">· 오답 노트에서 정복!</span>'}
+    while(p.exp>=expNeed(p.lv)){p.exp-=expNeed(p.lv);p.lv++;p.maxHp+=10;p.hp=Math.min(p.maxHp,p.hp+20);msg+=` <span class="pix gold">LEVEL UP! LV ${p.lv}</span>`;setTimeout(()=>beep('lv'),300)}
+  }else{
+    b.streak=0;b.missed.add(q.id);p.wrong[q.id]=(p.wrong[q.id]||0)+1;
+    p.hp-=foe.atk;
+    foeF.classList.add('foe-lunge');setTimeout(()=>{heroF.firstChild.classList.add('hit');$('#arena').classList.add('flash-red');floatDmg(heroF,'-'+foe.atk,'#ef6b70')},150);
+    beep('bad');
+    b.queue.splice(Math.min(2,b.queue.length),0,q); // 틀린 빈칸은 2문제 뒤에 다시
+  }
+  save();
+  $('#fb').innerHTML=`<div class="fb">
+    <div class="verdict ${ok?'ok':'no'}">${ok?'정답! 공격 성공':'오답… '+esc(foe.name)+'의 반격! (-'+foe.atk+' HP)'}</div>
+    ${ok?'':`<div class="ans">${typed?`내 답: <s>${esc(typed)}</s> · `:''}정답: <b class="gold">${esc(q.a[0])}</b></div>`}
+    <div class="coach"><span class="tc"></span><div class="say"><b>도윤쌤</b> · ${ok?pick(CHEER):pick(COMFORT)}<br>${esc(q.e)}</div></div>
+    <div class="row" style="justify-content:space-between"><div>${msg}</div><button class="btn primary" id="cont">계속 ▶</button></div>
+  </div>`;
+  document.querySelector('#fb .tc').append(teacher(2));
+  refreshHud(true);
+  const c=$('#cont');c.focus({preventScroll:true});c.onclick=afterAnswer;
+  $('#fb').scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function afterAnswer(){
+  const b=S.battle,p=S.player,foe=b.foes[b.fi];
+  if(p.hp<=0){go('over');return}
+  if(foe.hp<=0){
+    const fs=$('#foeF canvas');if(fs){fs.classList.remove('bob');fs.classList.add('dying')}
+    let drop;
+    if(Math.random()<.5){p.potions++;drop='회복약'}else{p.hints++;drop='초성 힌트'}
+    if(foe.boss&&!b.practice){p.potions++;drop+=' + 회복약'}
+    save();beep('win');
+    setTimeout(()=>{toast(`${foe.name} 격파! ${drop} 획득`);if(b.fi<b.foes.length-1){b.fi++;nextQ()}else finishStage()},650);
+    return;
+  }
+  nextQ();
+}
+function usePotion(){
+  const p=S.player;if(!p.potions||p.hp>=p.maxHp)return;
+  p.potions--;p.hp=Math.min(p.maxHp,p.hp+40);save();beep('heal');toast('HP 40 회복!');refreshHud(true);
+}
+function useHint(){
+  const b=S.battle,p=S.player,q=b.q;if(!p.hints||b.locked||b.hintUsed)return;
+  p.hints--;b.hintUsed=true;save();beep('heal');
+  const ans=q.a[0];
+  $('#hint').innerHTML=`<div class="hintline">초성 힌트 <span class="cho">${esc(chosung(ans))}</span> · 띄어쓰기 빼고 ${[...ans.replace(/\s/g,'')].length}글자</div>`;
+  refreshHud(true);$('#ans').focus();
+}
+function finishStage(){
+  const b=S.battle,p=S.player,acc=b.t?b.c/b.t:0;
+  const res={st:b.st,c:b.c,t:b.t,acc:Math.round(acc*100),stars:stars(acc),missed:[...b.missed]};
+  if(!b.practice){const prev=p.cleared[b.st.id];if(!prev||prev.acc<res.acc)p.cleared[b.st.id]={acc:res.acc,stars:res.stars}}
+  save();S.lastResult=res;
+  go(b.st.id==='final'?'ending':'result');
+}
+
+/* ============ 결과 / 게임오버 / 엔딩 ============ */
+function noteHTML(i,extra){const q=Q[i];return `<div class="note"><span class="tag">주제 ${q.t} ${q.mark}${extra||''}</span><div class="q">${sentence(q,q.a[0],'filled-ok')}</div><div class="muted">${esc(q.e)}</div></div>`}
+function missedHTML(ids){
+  if(!ids.length)return '<p class="muted">틀린 빈칸이 없어요. 완벽해요!</p>';
+  return `<div class="note-list">${ids.map(i=>noteHTML(i)).join('')}</div>`;
+}
+function renderResult(){
+  const r=S.lastResult;
+  app.innerHTML=hudHTML(false)+`
+  <section class="win" style="display:grid;gap:16px">
+    <div><div class="pix gold">${r.st.id==='practice'?'PRACTICE CLEAR':'STAGE CLEAR'}</div><h2 style="font-size:32px">${r.st.place} 회복 완료!</h2><div class="muted">${r.st.title}</div></div>
+    ${r.st.memory?`<div class="talk"><span id="rt"></span><div><div class="name">도윤쌤</div><p>기억의 조각 <b class="gold">「${r.st.memory}」</b>을 되찾았어요. 이 시대를 살아 낸 사람들의 이야기를 잊지 말아 주세요.</p></div></div>`:''}
+    <div class="result-grid">
+      <div class="stat"><div class="l">정답률</div><div class="v">${r.acc}%</div></div>
+      <div class="stat"><div class="l">채운 빈칸</div><div class="v">${r.c}/${r.t}</div></div>
+      <div class="stat"><div class="l">평가</div><div class="v stars">${'★'.repeat(r.stars)}${'☆'.repeat(3-r.stars)}</div></div>
+    </div>
+    <h3 style="font-size:22px">이번 전투에서 틀린 빈칸</h3>
+    ${missedHTML(r.missed)}
+    <div class="row"><button class="btn primary" id="map">연표 지도로 ▶</button>${r.st.id!=='practice'?'<button class="btn" id="again">다시 도전</button>':''}</div>
+  </section>`;
+  bindHud();
+  const rt=$('#rt');if(rt)rt.append(teacher(3));
+  $('#map').onclick=()=>go('map');
+  const a=$('#again');if(a)a.onclick=()=>startBattle(r.st.id);
+}
+function renderOver(){
+  const b=S.battle;
+  app.innerHTML=`<section class="win" style="display:grid;gap:16px;text-align:center;justify-items:center">
+    <div class="pix" style="color:var(--bad)">GAME OVER</div>
+    <h2 style="font-size:34px">기억이 흐려졌다…</h2>
+    <div class="row" id="gs" style="justify-content:center;align-items:flex-end;gap:20px"></div>
+    <p class="story"><b class="gold">도윤쌤</b> "괜찮아요, 넘어져도 다시 일어나면 돼요. 아래 빈칸을 한 번 소리 내어 읽고 다시 가 봐요!" <span class="muted">(레벨과 경험치는 그대로예요)</span></p>
+  </section>
+  <section class="win" style="display:grid;gap:12px"><h3 style="font-size:22px">다시 볼 빈칸</h3>${missedHTML([...b.missed])}
+  <div class="row"><button class="btn primary" id="retry">다시 도전 ▶</button><button class="btn" id="map">연표 지도로</button></div></section>`;
+  const c=sprite('ghost',b.foes[b.fi].color,5);c.classList.add('bob');$('#gs').append(teacher(4),c);
+  S.player.hp=S.player.maxHp;save();
+  $('#retry').onclick=()=>startBattle(b.st.id);
+  $('#map').onclick=()=>go('map');
+}
+function hearts(n){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  for(let i=0;i<n;i++){setTimeout(()=>{const h=document.createElement('span');h.className='heart';h.textContent='♥';h.style.left=(Math.random()*100)+'vw';h.style.fontSize=(16+Math.random()*18)+'px';h.style.color=['#ef7b97','#f3c34f','#f6b3c4','#ff9db2'][i%4];document.body.append(h);setTimeout(()=>h.remove(),3300)},i*120)}
+}
+function renderEnding(){
+  const p=S.player,r=S.lastResult||{acc:0,missed:[]},acc=p.stats.t?Math.round(p.stats.c/p.stats.t*100):0;
+  const name=esc(p.name);
+  app.innerHTML=`<section class="win cert">
+    <div class="pix gold">THE END · 기억 회복</div>
+    <h2>망각의 군주 격파!</h2>
+    <div id="es" class="title-sprites"></div>
+    <p class="story">1945년 광복부터 1969년 3선 개헌까지, 흩어졌던 기억이 모두 돌아왔어요.</p>
+    <div class="result-grid">
+      <div class="stat"><div class="l">최종 레벨</div><div class="v">LV ${p.lv}</div></div>
+      <div class="stat"><div class="l">최종 결전 정답률</div><div class="v">${r.acc}%</div></div>
+      <div class="stat"><div class="l">누적 정답률</div><div class="v">${acc}%</div></div>
+    </div>
+  </section>
+  <section class="win" style="display:grid;gap:12px">
+    <h3 style="font-size:22px">되찾은 기억의 조각</h3>
+    <div class="memories">${STAGES.slice(0,8).map(s=>{const c=p.cleared[s.id];return `<div class="mem"><span class="y">주제 ${s.num} · ${s.years}</span>${s.memory}<br><span class="stars" style="font-size:12px">${c?'★'.repeat(c.stars)+'☆'.repeat(3-c.stars):''}</span></div>`}).join('')}</div>
+  </section>
+  <article class="letter">
+    <h3>사랑하는 ${name} 대원에게</h3>
+    <p>긴 여행 끝까지 함께해 줘서 고마워요. 오늘 여러분이 채운 빈칸은 단순한 시험 범위가 아니에요. 이 땅을 살아 낸 사람들의 이름이고, 눈물이고, 용기예요.</p>
+    <p>광복의 거리에서 만세를 부르던 사람들, 통일 정부를 꿈꾸며 38도선을 넘었던 김구와 김규식, 전쟁 속에서도 천막 교실에서 한글을 배운 아이들, 그리고 <b>여러분과 같은 나이에</b> 대구에서, 마산에서, 경무대 앞에서 "민주주의"를 외친 학생들.</p>
+    <p>그분들이 포기하지 않았기에 지금 우리가 교실에 앉아 자유롭게 배우고, 꿈꿀 수 있어요. 역사를 기억한다는 건 그분들의 용기를 이어받겠다는 약속이에요. 아픈 장면도 외면하지 않고 기억할 때, 같은 아픔이 되풀이되지 않아요.</p>
+    <p>우리 역사를 사랑하는 마음을 꼭 간직해 주세요. 그리고 언젠가 여러분도 누군가에게 <b>기억하고 싶은 역사</b>가 되어 주길 바라요. 선생님은 언제나 여러분을 응원해요.</p>
+    <p class="sign">여러분의 한국사 선생님, 도윤쌤이</p>
+  </article>
+  <section class="win pledge" id="pledge">
+    ${p.pledged?pledgeDone(name):`<div class="muted">편지를 다 읽었다면, 마지막 약속을 해 볼까요?</div><button class="btn primary" id="vow">나는 우리 역사를 기억하겠습니다 ♥</button>`}
+  </section>
+  ${r.missed&&r.missed.length?`<section class="win" style="display:grid;gap:12px"><h3 style="font-size:22px">최종 결전에서 틀린 빈칸</h3>${missedHTML(r.missed)}</section>`:''}
+  <section class="win footer-row"><span class="muted" style="font-size:14px">별 3개가 안 된 주제는 다시 도전하고, "오답 정복 전투"로 마무리하세요.</span><button class="btn" id="map">연표 지도로</button></section>`;
+  const es=$('#es');es.append(heroSprite(p.cls,6),teacher(5));
+  $('#map').onclick=()=>go('map');
+  const v=$('#vow');if(v)v.onclick=()=>{p.pledged=true;save();beep('love');hearts(28);$('#pledge').innerHTML=pledgeDone(name)};
+  if(!p.pledged)setTimeout(()=>hearts(10),400);
+}
+function pledgeDone(name){
+  return `<div class="pix gold">PROMISE</div>
+    <div class="vow">${name} 대원은<br>우리 역사를 기억하고 사랑하겠습니다.</div>
+    <div class="muted">기억하는 한, 역사는 사라지지 않아요. 중간고사도, 그 너머의 삶도 응원해요!</div>`;
+}
+function renderNotes(){
+  const p=S.player,ids=Object.keys(p.wrong).map(Number).filter(i=>Q[i]).sort((a,b)=>Q[a].t-Q[b].t||a-b);
+  app.innerHTML=hudHTML(false)+`
+  <section class="win" style="display:grid;gap:16px">
+    <div class="map-head"><div><div class="pix gold">WRONG ANSWER NOTE</div><h2>오답 노트</h2></div><div class="muted" style="font-size:14px">${ids.length}개 · "오답 정복 전투"에서 맞히면 지워져요</div></div>
+    ${ids.length?`<div class="note-list">${ids.map(i=>noteHTML(i,' · 틀린 횟수 '+p.wrong[i])).join('')}</div>`:'<p class="muted">아직 틀린 빈칸이 없어요.</p>'}
+    <div class="row"><button class="btn primary" id="practice" ${ids.length?'':'disabled'}>오답 정복 전투 ▶</button><button class="btn" id="map">연표 지도로</button></div>
+  </section>`;
+  bindHud();
+  $('#practice').onclick=()=>startBattle('practice');
+  $('#map').onclick=()=>go('map');
+}
+
+/* ============ 라우팅 & 키보드 ============ */
+function go(s){
+  S.screen=s;
+  ({title:renderTitle,map:renderMap,brief:renderBrief,battle:()=>{},result:renderResult,over:renderOver,ending:renderEnding,notes:renderNotes}[s])();
+  if(s!=='battle')window.scrollTo({top:0});
+}
+document.addEventListener('keydown',e=>{
+  if(S.screen!=='battle'||!S.battle||!S.battle.locked)return;
+  if(e.key==='Enter'){const c=$('#cont');if(c&&document.activeElement!==c){e.preventDefault();c.click()}}
+});
+
+load();
+go('title');
+</script>
+
+</body></html>
